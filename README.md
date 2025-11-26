@@ -1,7 +1,7 @@
 # Immich External Library to Internal
 
 ## What?
-This script automates the process of transferring external library assets to the internal immich library.
+This Python script automates the process of transferring external library assets to the internal immich library.
 ## Why?
 Immich is now stable and a solid option to handle mobile device backup, rather than needing to use some other system for backups and giving immich access as an external library. Using its internal library allows for duplicate detection.
 It is possible to simply upload your external library assets into immich directly, but there are a few problems with that approach.
