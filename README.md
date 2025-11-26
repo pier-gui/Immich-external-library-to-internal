@@ -5,7 +5,7 @@ This Python script automates the process of transferring external library assets
 ## Why?
 Immich is now stable and a solid option to handle mobile device backup, rather than needing to use some other system for backups and giving immich access as an external library. Using its internal library allows for duplicate detection.
 It is possible to simply upload your external library assets into immich directly, but there are a few problems with that approach.
-- Need enough free disk space to hold all of the assets twice
+- Need enough free disk space to hold all of the assets a second time
 - Because the uploaded assets will be detected as new, album information will not be carried over on import
 ## How does the script work?
 1. Identify all assets within the external library
