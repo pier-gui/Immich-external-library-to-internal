@@ -203,12 +203,12 @@ print("""----- Immich Asset Mover -----
 Script to transfer external library assets to the internal library, keeping metadata and albums intact.""")
 # Show list of external libraries
 get_libraries()
-get_library_size()
+library_size = get_library_size()
 
 # get list of assets to process
 assets_list = get_assets_list()
 asset_count = len(assets_list)
-print(f"Processing {asset_count} assets from external library {LIBRARY_ID}.""")
+print(f"Processing {asset_count} assets from external library {LIBRARY_ID} ({library_size} mb).""")
 
 # process assets
 Current_Asset_No = 0
@@ -216,8 +216,9 @@ duplicates_count = 0
 new_count = 0
 processed_mb = 0
 current_mb = 0
-library_size = get_library_size()
 start_time = datetime.datetime.now()
+assets_with_errors = []
+error_count = 0
 for asset in assets_list:
     Current_Asset_No += 1
     FileName = asset['originalPath'].replace(CONTAINER_PATH_PRE,"",1)
@@ -227,7 +228,7 @@ for asset in assets_list:
     end_time = datetime.datetime.now()
     time_delta = str(end_time - start_time).split(".")[0]
 
-    print(f" [{round(processed_mb / library_size * 100,3)}%, Dups={duplicates_count}, New={new_count}, time={time_delta}] File {Current_Asset_No} of {asset_count}: {FileName} ({current_mb} mb)", end=" ")
+    print(f" [{round(processed_mb / library_size * 100,3)}%, Dups={duplicates_count}, New={new_count}, errs={error_count}, time={time_delta}] File {Current_Asset_No} of {asset_count}: {FileName} ({current_mb} mb)", end=" ")
 
     # Attempt to upload the asset
     upload_result = upload_asset(asset, ImportPath)
@@ -247,12 +248,20 @@ for asset in assets_list:
     print(f"{action_result}", end=" ")
 
     # now delete the original external library asset
-    delete_result = delete_asset(asset)
-    print(f"{delete_result}")
+    if action_result == "error":
+        print("The original asset was not deleted because an error occurred.")
+        assets_with_errors.append(asset['id'])
+        error_count +=1
+    else:
+        delete_result = delete_asset(asset)
+        print(f"{delete_result}")
 
 print(f"""
 ---- COMPLETE ----
 Uploaded assets: {asset_count}
 Duplicates count: {duplicates_count}
 New assets count: {new_count}
+
+{error_count} errors occurred. The following assets were not deleted:
+{assets_with_errors}
 """)
