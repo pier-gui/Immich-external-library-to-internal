@@ -20,6 +20,7 @@ It is possible to simply upload your external library assets into immich directl
  - API key from immich (under Account Settings - API Keys). You can examine the code to figure out which permissions are needed, or just allow all like I did.
  - Immich ID for the library (the script provides a list of all libraries to help with this)
  - Immich must have read/write permission for the external library (to delete assets)
+ - The external library should be freshly scanned before starting. Scan again before re-starting the script if it fails or is stopped (otherwise it may try to upload files that no longer exist in the external library).
  - Set the Configuration values at the top of the .py file before running it.
 ## Use at your own risk
 I cobbled this together having no prior experience with http requests or Python. It ran fine on my setup but... have a backup plan ready in case something goes wrong.
