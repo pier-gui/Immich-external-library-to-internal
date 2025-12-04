@@ -83,7 +83,7 @@ def get_assets_list():
 
             print(f"\r    {len(ext_data)} assets found so far...", end="", flush=True)
 
-        print(f"\n  Done finding assets.\n")
+        print(f"\n  Done finding assets.\n\n\n")
 
     except requests.exceptions.RequestException as e:
         print(f"Error making API request to find external library assets: {e}")
@@ -147,7 +147,7 @@ def handle_duplicate(asset, new_asset_id):
             response = requests.put(f"{IMMICH_URL}/api/albums/assets", headers=headers, data=payload)
             response.raise_for_status()
 
-            return "- albums merged."
+            return " - albums merged."
 
         except requests.exceptions.RequestException as e:
             print(f"Error making API request: {e}")
@@ -177,7 +177,7 @@ def transfer_metadata(asset, new_asset_id):
         response = requests.put(f"{IMMICH_URL}/api/assets/copy", headers=headers, data=payload)
         response.raise_for_status()
 
-        return "- metadata transferred."
+        return " - metadata transferred."
 
     except requests.exceptions.RequestException as e:
         # print(f"Error encountered. Partial result for asset: {Result_Message}")
@@ -186,7 +186,7 @@ def transfer_metadata(asset, new_asset_id):
             print(f"Response content: {e.response.text}")
         return "error"
 
-# Function to delete the asset (called after it is  fully copied to the internal library)
+# Function to delete the asset (called after it is fully copied to the internal library)
 def delete_asset(asset):
     payload = {"ids": [asset['id']], 'force': DELETE_FROM_TRASH}
 
@@ -194,7 +194,7 @@ def delete_asset(asset):
         response = requests.delete(f"{IMMICH_URL}/api/assets/", headers=headers, json=payload)
         response.raise_for_status()
 
-        return "External asset deleted."
+        return "External asset deleted"
 
     except requests.exceptions.RequestException as e:
         print(f"Error making API request: {e}")
@@ -208,6 +208,10 @@ def show_errors(error_count, assets_with_errors):
         for error_message in assets_with_errors:
             print(f"   {error_message}")
 
+def print_update (asset_string, progress_string):
+    print("\033[3A\033[0J", end="") # clear last 3 lines
+    print(f"{asset_string}\n\n{progress_string}") # print asset info, empty line, then upload stats
+
 # Start actions
 print("""----- Immich Asset Mover -----
 Script to transfer external library assets to the internal library, keeping metadata and albums intact.""")
@@ -218,7 +222,7 @@ library_size = get_library_size()
 # get list of assets to process
 assets_list = get_assets_list()
 asset_count = len(assets_list)
-print(f"Processing {asset_count} assets from external library {LIBRARY_ID} ({round(library_size,1)} mb).""")
+print(f"Processing {asset_count} assets from external library {LIBRARY_ID} ({round(library_size,1)} MB).""")
 
 # process assets
 Current_Asset_No = 0
@@ -230,9 +234,6 @@ current_mb = 0
 start_time = datetime.datetime.now()
 assets_with_errors = []
 error_count = 0
-last_x_times = [start_time] * 50 # fills a list with all values equal to start_time
-last_x_mbs = [0] * 50
-last_x_index = 0
 
 for asset in assets_list:
     Current_Asset_No += 1
@@ -241,25 +242,14 @@ for asset in assets_list:
     processed_mb += current_mb
     current_mb = os.path.getsize(ImportPath)/(1024*1024)
     end_time = datetime.datetime.now()
-    time_delta = str(end_time - start_time).split(".")[0]
+    time_delta = end_time - start_time
 
-    # estimate time remaining based on time difference and total size stored in last_x arrays
-    last_x_times[last_x_index] = end_time
-
-    # remaining time =  ( total mb * time delta / mb so far ) - time delta
     if Current_Asset_No == 1:
-        remaining_time = "TBD"
+        progress_string = "Stats TBD"
     else:
-        remaining_time = library_size * (max(last_x_times) - min(last_x_times)) / sum(last_x_mbs) - (max(last_x_times) - min(last_x_times))
-        remaining_time = str(remaining_time).split(".")[0]
-
-    # update last_x_mbs to include current asset on next run of the loop (it's not transferred yet at this point so not included in calculation
-    last_x_mbs[last_x_index] = current_mb
-    last_x_index += 1
-    if last_x_index == 50:
-        last_x_index = 0
-
-    print(f" [{round(processed_mb / library_size * 100,2)}%, Dups={duplicates_count} ({round(dups_saved_storage,1)} mb), New={new_count}, errs={error_count}, time={time_delta} ({remaining_time} to go)] File {Current_Asset_No} of {asset_count}: {FileName} ({round(current_mb,2)} mb)", end=" ")
+        progress_string = f"Processed {round(processed_mb,2)} MB out of {round(library_size,2)} ({round(processed_mb / library_size * 100,2)}%). Dups={duplicates_count} ({round(dups_saved_storage,1)} MB), New={new_count}, Errs={error_count}, Elapsed Time={str(time_delta).split(".")[0]}, Remaining: {str((library_size*time_delta/processed_mb)-time_delta).split(".")[0]}"
+    asset_string = f"File {Current_Asset_No} of {asset_count}: {FileName} ({round(current_mb,2)} MB). "
+    print_update(asset_string, progress_string)
 
     # Attempt to upload the asset
     upload_result = upload_asset(asset, ImportPath)
@@ -267,17 +257,17 @@ for asset in assets_list:
     while upload_result == "error":
         upload_errors += 1
         if upload_errors == 5:
-            print("Upload failed 5 times. Skipping to next asset.")
+            asset_string=asset_string+"\n  Upload failed 5 times. Skipping to next asset"
             assets_with_errors.append(f"{asset['originalPath']} (failed 5 attempts to upload)")
             error_count += 1
             break
-        print("   Re-trying upload... ", end=" ")
+        asset_string=asset_string+"\n    Re-trying upload..."
         upload_result = upload_asset(asset, ImportPath)
 
     if upload_result != "error":
         new_asset_id = upload_result["id"]
         new_asset_ids = [new_asset_id] # must be array
-        print(f"Upload result: {upload_result['status']}", end=" ")
+        asset_string += f"Upload result: {upload_result['status']}"
 
         if upload_result['status'] == 'duplicate':
             action_result=handle_duplicate(asset,new_asset_id)
@@ -287,11 +277,13 @@ for asset in assets_list:
             action_result=transfer_metadata(asset,new_asset_id)
             new_count += 1
 
-        print(f"{action_result}", end=" ")
+        asset_string += f"{action_result}"
+        print_update(asset_string, progress_string)
 
         # now delete the original external library asset, unless an error occurred
         if action_result == "error":
-            print("External asset NOT deleted.")
+            asset_string += "External asset NOT deleted."
+            # print("External asset NOT deleted.")
             assets_with_errors.append(f"{asset['originalPath']} (uploaded but couldn't sync metadata/albums)")
             error_count +=1
         else:
@@ -299,7 +291,9 @@ for asset in assets_list:
             if delete_result == "error":
                 error_count += 1
                 assets_with_errors.append(f"{asset['originalPath']} (couldn't delete)")
-            print(f"{delete_result}")
+            
+            asset_string += f" {delete_result}.\n"
+        print_update(asset_string, progress_string)
 print(f"""
 ---- COMPLETE ----
 Uploaded assets: {asset_count}
