@@ -247,7 +247,13 @@ for asset in assets_list:
     if Current_Asset_No == 1:
         progress_string = "Stats TBD"
     else:
-        progress_string = f"Processed {round(processed_mb,2)} MB out of {round(library_size,2)} ({round(processed_mb / library_size * 100,2)}%). Dups={duplicates_count} ({round(dups_saved_storage,1)} MB), New={new_count}, Errs={error_count}, Elapsed Time={str(time_delta).split(".")[0]}, Remaining: {str((library_size*time_delta/processed_mb)-time_delta).split(".")[0]}"
+        progress_string = (
+            f"Processed {round(processed_mb,2)} MB out of {round(library_size,2)} "
+            f"({round(processed_mb / library_size * 100,2)}%). "
+            f"Dups={duplicates_count} ({round(dups_saved_storage,1)} MB), "
+            f"New={new_count}, Errs={error_count}, Elapsed Time={elapsed_time}, "
+            f"Remaining: {remaining_time}"
+        )
     asset_string = f"File {Current_Asset_No} of {asset_count}: {FileName} ({round(current_mb,2)} MB). "
     print_update(asset_string, progress_string)
 
